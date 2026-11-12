@@ -9,7 +9,12 @@
  * Signing: ECDSA over the 32 raw bytes of contentHash(message) (sha256, from protocol).
  */
 import {
+  AccountAllowanceApproveTransaction,
   AccountCreateTransaction,
+  ContractCallQuery,
+  ContractExecuteTransaction,
+  ContractFunctionParameters,
+  ContractId,
   AccountId,
   Client,
   Hbar,
@@ -20,9 +25,11 @@ import {
   TokenType,
   TopicCreateTransaction,
   TopicMessageSubmitTransaction,
+  TransactionId,
   TransferTransaction,
 } from '@hiero-ledger/sdk';
 import { contentHash, toHcsRecord, type AgentMessage } from '@agent-market/protocol';
+import { jobRef, STATUS_NAMES, type EscrowClient, type EscrowJob, type EscrowTxResult } from './escrow.js';
 import type {
   HederaAccount,
   HederaClient,
@@ -34,28 +41,32 @@ import type {
 export interface SdkClientState {
   tokenId?: string;
   topicId?: string;
+  escrow?: { contractId: string };
   /** accountId -> DER private key */
   keys: Record<string, string>;
 }
 
 const MIRROR = 'https://testnet.mirrornode.hedera.com';
 
-export class SdkHederaClient implements HederaClient {
+export class SdkHederaClient implements HederaClient, EscrowClient {
   private readonly client: Client;
   private readonly operatorId: string;
   private readonly keys = new Map<string, PrivateKey>();
   tokenId?: string;
   topicId?: string;
+  escrowContractId?: string;
 
   constructor(operatorId: string, operatorKeyDer: string, state?: SdkClientState) {
     this.operatorId = operatorId;
     const opKey = PrivateKey.fromStringDer(operatorKeyDer);
     this.client = Client.forTestnet();
     this.client.setOperator(AccountId.fromString(operatorId), opKey);
+    this.client.setDefaultMaxTransactionFee(new Hbar(20));
     this.keys.set(operatorId, opKey);
     if (state) {
       this.tokenId = state.tokenId;
       this.topicId = state.topicId;
+      this.escrowContractId = state.escrow?.contractId;
       for (const [id, der] of Object.entries(state.keys)) {
         this.keys.set(id, PrivateKey.fromStringDer(der));
       }
@@ -72,7 +83,12 @@ export class SdkHederaClient implements HederaClient {
   exportState(): SdkClientState {
     const keys: Record<string, string> = {};
     for (const [id, k] of this.keys) if (id !== this.operatorId) keys[id] = k.toStringDer();
-    return { tokenId: this.tokenId, topicId: this.topicId, keys };
+    return {
+      tokenId: this.tokenId,
+      topicId: this.topicId,
+      escrow: this.escrowContractId ? { contractId: this.escrowContractId } : undefined,
+      keys,
+    };
   }
 
   /** Credits token: whole units (0 decimals) so amounts equal what agents see. Operator = treasury. */
@@ -180,6 +196,81 @@ export class SdkHederaClient implements HederaClient {
     return j.tokens?.find((t) => t.token_id === this.tokenId)?.balance ?? 0;
   }
 
+  // ------------------------------------------------------------------ escrow
+
+  get escrowAddress(): string {
+    return this.escrowContractId ?? '';
+  }
+
+  /** Consumer approves the contract to pull `amount` credits, then funds the job (held in escrow). */
+  async fundJob(jobId: string, consumerId: string, providerId: string, amount: number, deadlineSecs: number): Promise<EscrowTxResult> {
+    const contract = this.escrow();
+    const consumerKey = this.keyOf(consumerId);
+    const allowance = await new AccountAllowanceApproveTransaction()
+      .approveTokenAllowance(this.tokenId!, consumerId, contract.toString(), amount)
+      .freezeWith(this.client)
+      .sign(consumerKey);
+    await (await allowance.execute(this.client)).getReceipt(this.client);
+
+    return this.call('fund', consumerId, new ContractFunctionParameters()
+      .addBytes32(this.ref(jobId))
+      .addAddress(evm(providerId))
+      .addUint256(amount)
+      .addUint64(deadlineSecs), jobId);
+  }
+
+  /** Provider submits the delivery hash; contract releases the funds to the provider. */
+  async deliverJob(jobId: string, providerId: string, resultHash: string): Promise<EscrowTxResult> {
+    const hash = Buffer.from(resultHash.replace(/^0x/, '').padStart(64, '0'), 'hex');
+    return this.call('deliver', providerId, new ContractFunctionParameters()
+      .addBytes32(this.ref(jobId))
+      .addBytes32(hash), jobId);
+  }
+
+  async refundJob(jobId: string, consumerId: string): Promise<EscrowTxResult> {
+    return this.call('refund', consumerId, new ContractFunctionParameters().addBytes32(this.ref(jobId)), jobId);
+  }
+
+  async getJob(jobId: string): Promise<EscrowJob> {
+    const r = await new ContractCallQuery()
+      .setContractId(this.escrow())
+      .setGas(200_000)
+      .setFunction('jobs', new ContractFunctionParameters().addBytes32(this.ref(jobId)))
+      .execute(this.client);
+    return {
+      consumer: fromEvm(r.getAddress(0)),
+      provider: fromEvm(r.getAddress(1)),
+      amount: r.getUint256(2).toNumber(),
+      deadline: r.getUint64(3).toNumber(),
+      status: STATUS_NAMES[r.getUint8(4)] ?? 'None',
+      resultHash: Buffer.from(r.getBytes32(5)).toString('hex').replace(/^0+$/, ''),
+    };
+  }
+
+  private escrow(): ContractId {
+    if (!this.escrowContractId) throw new Error('escrow contract not deployed (no escrow.contractId in state)');
+    return ContractId.fromString(this.escrowContractId);
+  }
+
+  private ref(jobId: string): Uint8Array {
+    return Buffer.from(jobRef(jobId).slice(2), 'hex');
+  }
+
+  /** Executes a contract call AS `accountId` (msg.sender = that account). */
+  private async call(fn: string, accountId: string, params: ContractFunctionParameters, jobId: string): Promise<EscrowTxResult> {
+    const tx = await new ContractExecuteTransaction()
+      .setContractId(this.escrow())
+      .setGas(1_000_000)
+      .setFunction(fn, params)
+      // msg.sender in the contract is the tx PAYER, so the acting account must pay.
+      .setTransactionId(TransactionId.generate(accountId))
+      .freezeWith(this.client)
+      .sign(this.keyOf(accountId));
+    const res = await tx.execute(this.client);
+    await res.getReceipt(this.client);
+    return { txId: res.transactionId.toString(), contractJobRef: jobRef(jobId) };
+  }
+
   close(): void {
     this.client.close();
   }
@@ -200,4 +291,14 @@ export class SdkHederaClient implements HederaClient {
       ? PublicKey.fromStringED25519(j.key.key)
       : PublicKey.fromStringECDSA(j.key.key);
   }
+}
+
+/** Long-zero EVM address for a 0.0.N entity (accounts here have no alias). */
+function evm(id: string): string {
+  return '0x' + BigInt(id.split('.')[2]!).toString(16).padStart(40, '0');
+}
+
+/** Inverse of evm(): contract returns long-zero addresses for our accounts. */
+function fromEvm(addr: string): string {
+  return `0.0.${BigInt('0x' + addr.replace(/^0x/, '')).toString()}`;
 }
