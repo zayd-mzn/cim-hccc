@@ -111,4 +111,58 @@ describe('MarketplaceEngine end-to-end', () => {
     expect(delivery.resultHash).toHaveLength(64);
     expect(engine.getJob(jobId)?.status).toBe('released');
   });
+
+  it('refunds a paid-but-undelivered job after the deadline', async () => {
+    // Provider that quotes an already-expired offer so refund is allowed now.
+    const hedera = new InMemoryHederaClient();
+    const { tokenId } = await hedera.createToken();
+    const { topicId } = await hedera.createTopic();
+    const engine = new MarketplaceEngine({ hedera, topicId, tokenId });
+
+    const providerAccount = await hedera.createAccount('provider');
+    engine.bindAccount('p1', providerAccount.accountId);
+    engine.connectProvider(
+      { providerId: 'p1', name: 'P1', capabilities: ['dataset'], basePrice: 25, tokenId },
+      {
+        providerId: 'p1',
+        async quote() {
+          // Expired 10s ago → deadline already passed.
+          return { price: 25, expiresAt: new Date(Date.now() - 10_000).toISOString() };
+        },
+        async deliver({ jobId }) {
+          return { resultHash: 'a'.repeat(64), resultLocation: `mem://${jobId}` };
+        },
+      },
+    );
+    const consumerAccount = await hedera.createAccount('consumer');
+    hedera.grant(consumerAccount.accountId, 1000);
+    engine.bindAccount('c1', consumerAccount.accountId);
+
+    const { jobId } = await engine.requestService({
+      consumerAgentId: 'c1',
+      providerId: 'p1',
+      capability: 'dataset',
+      spec: {},
+    });
+    await engine.payForJob({ consumerAgentId: 'c1', jobId });
+    expect(await hedera.balanceOf(consumerAccount.accountId)).toBe(975);
+
+    // Provider never delivers; consumer refunds after the (expired) deadline.
+    await engine.refundJob({ jobId });
+    expect(engine.getJob(jobId)?.status).toBe('failed');
+    expect(await hedera.balanceOf(consumerAccount.accountId)).toBe(1000);
+    expect(await hedera.balanceOf(providerAccount.accountId)).toBe(0);
+  });
+
+  it('blocks refund before the deadline', async () => {
+    const { engine } = await setup(); // default provider offers a 60s-future deadline
+    const { jobId } = await engine.requestService({
+      consumerAgentId: 'c1',
+      providerId: 'p1',
+      capability: 'dataset',
+      spec: {},
+    });
+    await engine.payForJob({ consumerAgentId: 'c1', jobId });
+    await expect(engine.refundJob({ jobId })).rejects.toThrow(/before deadline/);
+  });
 });
