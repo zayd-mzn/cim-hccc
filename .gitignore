@@ -28,3 +28,8 @@ agent-market/
 
 # Testnet keys + ids from setup script
 .hedera-state.json
+
+# Hardhat
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/

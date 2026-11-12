@@ -1,0 +1,19 @@
+{
+  "name": "@agent-market/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Settlement + escrow contract for Agent Market (Hedera Smart Contract Service). Owner: Abdellah.",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "tsx scripts/deploy.mts",
+    "spike": "tsx scripts/spike.mts"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "5.0.0",
+    "hardhat": "2.22.17",
+    "tsx": "4.19.2",
+    "@hiero-ledger/sdk": "2.90.0",
+    "dotenv": "16.4.5"
+  }
+}

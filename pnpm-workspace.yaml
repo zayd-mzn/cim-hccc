@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "services/*"
   - "services/agents/*"
+  - "contracts"
 
 # esbuild postinstall (used by tsx + vitest) must be allowed to run.
 onlyBuiltDependencies:
@@ -11,3 +12,6 @@ onlyBuiltDependencies:
 verifyDepsBeforeRun: false
 allowBuilds:
   esbuild: set this to true or false
+  keccak: set this to true or false
+  protobufjs: set this to true or false
+  secp256k1: set this to true or false
