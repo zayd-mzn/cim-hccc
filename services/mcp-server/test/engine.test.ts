@@ -83,4 +83,32 @@ describe('MarketplaceEngine end-to-end', () => {
     });
     await expect(engine.getDelivery({ jobId })).rejects.toThrow(/not paid/);
   });
+
+  it('registerAgent provisions a funded custodial account and is idempotent', async () => {
+    const { hedera, engine } = await setup();
+    const first = await engine.registerAgent({ agentId: 'ext', initialGrant: 500 });
+    expect(first.accountId).toMatch(/^0\.0\./);
+    expect(engine.hasAccount('ext')).toBe(true);
+    expect(await hedera.balanceOf(first.accountId)).toBe(500);
+
+    // Idempotent: same agentId returns the same account, no double funding.
+    const second = await engine.registerAgent({ agentId: 'ext', initialGrant: 500 });
+    expect(second.accountId).toBe(first.accountId);
+    expect(await hedera.balanceOf(first.accountId)).toBe(500);
+  });
+
+  it('a registered agent can run the full flow end-to-end', async () => {
+    const { hedera, engine } = await setup();
+    await engine.registerAgent({ agentId: 'ext', initialGrant: 1000 });
+    const { jobId } = await engine.requestService({
+      consumerAgentId: 'ext',
+      providerId: 'p1',
+      capability: 'dataset',
+      spec: { rows: 10 },
+    });
+    await engine.payForJob({ consumerAgentId: 'ext', jobId });
+    const delivery = await engine.getDelivery({ jobId });
+    expect(delivery.resultHash).toHaveLength(64);
+    expect(engine.getJob(jobId)?.status).toBe('released');
+  });
 });

@@ -1,0 +1,16 @@
+{
+  "name": "@agent-market/external-agent-demo",
+  "version": "0.1.0",
+  "description": "A BRING-YOUR-OWN external agent. Imports ONLY the MCP SDK — no @agent-market code — and joins the marketplace over stdio. Proves TRUST-MODEL.md Model B. (Zayd)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "tsx src/external-agent.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.12.1"
+  }
+}

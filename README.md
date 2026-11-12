@@ -20,9 +20,19 @@ log where every message carries a verified content hash.
 ```bash
 pnpm install
 pnpm build
-pnpm test        # 10 tests across protocol, engine, and the consumer loop
-pnpm demo        # runs the end-to-end two-agent demo + prints the HCS log
+pnpm test            # 12 tests across protocol, engine, and the consumer loop
+pnpm demo            # in-process two-agent demo + prints the HCS log
+pnpm demo:external   # bring-your-own agent: a separate process joins over stdio
 ```
+
+### Bring-your-own-agent (Model B)
+
+`pnpm demo:external` runs `services/agents/external-demo` — a standalone agent
+that imports **only** the MCP SDK (zero `@agent-market/*` code). It spawns the
+MCP server as a subprocess over stdio, discovers the tools dynamically, calls
+`register_agent` to get an on-chain identity, and completes a full job. This is
+the proof that any MCP-capable agent, built in any framework, can join the
+marketplace without importing our code (TRUST-MODEL.md Model B).
 
 ## Packages
 
@@ -30,10 +40,11 @@ pnpm demo        # runs the end-to-end two-agent demo + prints the HCS log
 |---|---|---|
 | `packages/protocol` | Youssef | **Provisional** — built from `PROTOCOL.md` so I'm unblocked. Reconcile with Youssef. |
 | `services/hedera-core` | Abdellah | **Interface + in-memory stub**. Real `@hashgraph/sdk` impl is Abdellah's. |
-| `services/mcp-server` | **Zayd** | Done — 5 MCP tools + marketplace engine + payment seam. |
+| `services/mcp-server` | **Zayd** | Done — 6 MCP tools + marketplace engine + payment seam. |
 | `packages/agent-kit` | **Zayd** | Done — provider-agnostic LLM loop + MCP client wiring. |
 | `services/agents/provider` | **Zayd** | Done — Data Provider agent (pricing + delivery). |
 | `services/agents/consumer` | **Zayd** | Done — Analysis agent (LLM tool-calling loop) + demo. |
+| `services/agents/external-demo` | **Zayd** | Done — bring-your-own agent (MCP SDK only) over stdio. |
 
 ## Dependency seams (where teammates plug in)
 

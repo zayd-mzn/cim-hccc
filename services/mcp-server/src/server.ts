@@ -28,6 +28,11 @@ export interface CreateMcpServerOptions {
   engine: MarketplaceEngine;
   name?: string;
   version?: string;
+  /**
+   * Credits granted to a newly registered agent's custodial account (PoC only).
+   * Default 1000. Set 0 to disable auto-funding.
+   */
+  registrationGrant?: number;
 }
 
 export function createMcpServer(opts: CreateMcpServerOptions): McpServer {
@@ -40,6 +45,28 @@ export function createMcpServer(opts: CreateMcpServerOptions): McpServer {
   function ok(data: unknown) {
     return { content: [{ type: 'text' as const, text: JSON.stringify(data) }] };
   }
+
+  server.registerTool(
+    'register_agent',
+    {
+      description:
+        'Register this agent with the marketplace. Provisions a server-custodial Hedera account and returns its identity. Call once before using other tools. Idempotent.',
+      inputSchema: {
+        agentId: z
+          .string()
+          .describe('A stable id you choose for this agent; present it on later calls'),
+        label: z.string().optional().describe('Human-friendly label'),
+      },
+    },
+    async ({ agentId, label }) => {
+      const identity = await engine.registerAgent({
+        agentId,
+        label,
+        initialGrant: opts.registrationGrant ?? 1000,
+      });
+      return ok(identity);
+    },
+  );
 
   server.registerTool(
     'discover_providers',

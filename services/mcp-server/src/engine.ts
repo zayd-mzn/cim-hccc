@@ -102,6 +102,45 @@ export class MarketplaceEngine {
     this.custodialAccounts.set(agentId, accountId);
   }
 
+  /** Whether an agent id already has a bound custodial account. */
+  hasAccount(agentId: string): boolean {
+    return this.custodialAccounts.has(agentId);
+  }
+
+  /**
+   * Register a (typically external, bring-your-own) agent: provision a
+   * server-custodial Hedera account for it and bind it to the agentId it will
+   * present on subsequent tool calls. Idempotent — returns the existing account
+   * if the agent is already registered.
+   *
+   * This is Model B step 1–2 (TRUST-MODEL.md): the agent gets an on-chain
+   * identity and joins the marketplace, without importing any of our code.
+   *
+   * `initialGrant` funds the account for the PoC; a real deployment would fund
+   * via a real transfer. Only honoured if the stub client supports `grant`.
+   */
+  async registerAgent(input: {
+    agentId: string;
+    label?: string;
+    initialGrant?: number;
+  }): Promise<{ agentId: string; accountId: string; publicKey: string }> {
+    const existing = this.custodialAccounts.get(input.agentId);
+    if (existing) {
+      return { agentId: input.agentId, accountId: existing, publicKey: '' };
+    }
+    const account = await this.hedera.createAccount(input.label ?? input.agentId);
+    this.bindAccount(input.agentId, account.accountId);
+    if (input.initialGrant && input.initialGrant > 0) {
+      const granter = this.hedera as { grant?: (a: string, n: number) => void };
+      granter.grant?.(account.accountId, input.initialGrant);
+    }
+    return {
+      agentId: input.agentId,
+      accountId: account.accountId,
+      publicKey: account.publicKey,
+    };
+  }
+
   private accountFor(agentId: string): string {
     const acct = this.custodialAccounts.get(agentId);
     if (!acct) throw new Error(`no custodial account bound for agent ${agentId}`);

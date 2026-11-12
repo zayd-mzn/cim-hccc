@@ -60,6 +60,12 @@ importers:
         specifier: 1.12.1
         version: 1.12.1
 
+  services/agents/external-demo:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 1.12.1
+        version: 1.12.1
+
   services/agents/provider:
     dependencies:
       '@agent-market/mcp-server':
