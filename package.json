@@ -9,6 +9,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "demo": "pnpm --filter @agent-market/consumer demo",
+    "demo:testnet": "pnpm --filter @agent-market/consumer demo:testnet",
     "demo:external": "pnpm --filter @agent-market/external-agent-demo build && pnpm --filter @agent-market/mcp-server build && pnpm --filter @agent-market/external-agent-demo start",
     "start:mcp": "pnpm --filter @agent-market/mcp-server start"
   },

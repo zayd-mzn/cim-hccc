@@ -19,7 +19,7 @@
  * client wires AgentEscrow in, implement this same interface over it — nothing
  * else in my workstream changes.
  */
-import type { HederaClient } from '@agent-market/hedera-core';
+import type { EscrowClient, HederaClient } from '@agent-market/hedera-core';
 
 /** The x402 "402 Payment Required" challenge a Consumer must satisfy. */
 export interface PaymentRequired {
@@ -190,4 +190,80 @@ export class StubPaymentGateway implements PaymentGateway {
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+/**
+ * EscrowPaymentGateway — a PaymentGateway backed by an EscrowClient.
+ *
+ * Works with BOTH of Abdellah's implementations behind the same code path:
+ *   - InMemoryEscrowClient  (local runs / CI, no network)
+ *   - SdkHederaClient        (real AgentEscrow contract on Hedera testnet)
+ *
+ * This is the real settlement path. The engine is identical whether it runs on
+ * the stub or on-chain; only which EscrowClient we inject changes.
+ *
+ * Per-job consumer/provider context is captured at `pay` time so `release` and
+ * `refund` can supply the ids the EscrowClient methods require.
+ */
+interface EscrowContext {
+  consumerAccountId: string;
+  providerAccountId: string;
+  amount: number;
+  contractJobRef: string;
+}
+
+export class EscrowPaymentGateway implements PaymentGateway {
+  private readonly contexts = new Map<string, EscrowContext>();
+
+  constructor(private readonly escrow: EscrowClient) {}
+
+  requirePayment(input: PaymentRequired): PaymentRequired {
+    // The real contract address comes from the EscrowClient.
+    return { ...input, contractAddress: this.escrow.escrowAddress };
+  }
+
+  async pay(challenge: PaymentRequired, consumerAccountId: string): Promise<PaymentProof> {
+    const result = await this.escrow.fundJob(
+      challenge.jobId,
+      consumerAccountId,
+      challenge.providerAccountId,
+      challenge.amount,
+      challenge.deadline,
+    );
+    this.contexts.set(challenge.jobId, {
+      consumerAccountId,
+      providerAccountId: challenge.providerAccountId,
+      amount: challenge.amount,
+      contractJobRef: result.contractJobRef,
+    });
+    return {
+      jobId: challenge.jobId,
+      txId: result.txId,
+      contractJobRef: result.contractJobRef,
+      amount: challenge.amount,
+    };
+  }
+
+  async verify(proof: PaymentProof): Promise<boolean> {
+    const job = await this.escrow.getJob(proof.jobId);
+    return job.status === 'Held' && job.amount === proof.amount;
+  }
+
+  async release(jobId: string, resultHash: string): Promise<{ txId: string }> {
+    const ctx = this.mustContext(jobId);
+    const result = await this.escrow.deliverJob(jobId, ctx.providerAccountId, resultHash);
+    return { txId: result.txId };
+  }
+
+  async refund(jobId: string): Promise<{ txId: string }> {
+    const ctx = this.mustContext(jobId);
+    const result = await this.escrow.refundJob(jobId, ctx.consumerAccountId);
+    return { txId: result.txId };
+  }
+
+  private mustContext(jobId: string): EscrowContext {
+    const ctx = this.contexts.get(jobId);
+    if (!ctx) throw new Error(`no escrow context for job ${jobId} (was pay() called?)`);
+    return ctx;
+  }
 }

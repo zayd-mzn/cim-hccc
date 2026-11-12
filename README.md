@@ -20,10 +20,25 @@ log where every message carries a verified content hash.
 ```bash
 pnpm install
 pnpm build
-pnpm test            # 12 tests across protocol, engine, and the consumer loop
+pnpm test            # 18 tests across protocol, hedera-core, engine, and the consumer loop
 pnpm demo            # in-process two-agent demo + prints the HCS log
 pnpm demo:external   # bring-your-own agent: a separate process joins over stdio
+pnpm demo:testnet    # same loop, settled on real Hedera testnet (needs secrets, below)
 ```
+
+### Running on Hedera testnet (`pnpm demo:testnet`)
+
+Wires the real `SdkHederaClient` + `AgentEscrow` contract + HCS topic behind the
+same engine/tools. Requires two gitignored files at the repo root (shared
+privately by Abdellah — throwaway testnet keys only):
+
+- `.env` — `OPERATOR_ID` / `OPERATOR_KEY`
+- `.hedera-state.json` — token/topic/escrow ids + custodial keys (from
+  `services/hedera-core/scripts/setup.ts`)
+
+> Needs outbound **gRPC to Hedera consensus nodes** (`*.testnet.hedera.com:50211`).
+> Read-only Mirror Node access (HTTPS) is not sufficient to submit transactions —
+> environments that firewall gRPC can read balances but cannot run the write path.
 
 ### Bring-your-own-agent (Model B)
 

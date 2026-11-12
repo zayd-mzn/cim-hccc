@@ -25,6 +25,12 @@ export interface AgentLoopOptions {
   goal: string;
   /** Hard cap on tool calls to prevent runaway loops. Default 12. */
   maxSteps?: number;
+  /**
+   * Per-tool-call timeout in ms. On-chain (testnet) tool calls are slow (HCS
+   * writes + contract calls), so set this high for a real network. Defaults to
+   * the MCP SDK default (60s) when omitted.
+   */
+  callTimeoutMs?: number;
 }
 
 /** Fetch the MCP server's tool list and adapt it to the LLM tool spec shape. */
@@ -68,7 +74,17 @@ export async function runAgentLoop(opts: AgentLoopOptions): Promise<AgentRunResu
       const { name, arguments: args } = response.toolCall;
       messages.push({ role: 'assistant', content: '', toolCall: { name, arguments: args } });
 
-      const raw = await opts.mcp.callTool({ name, arguments: args });
+      const raw = await opts.mcp.callTool(
+        { name, arguments: args },
+        undefined,
+        opts.callTimeoutMs ? { timeout: opts.callTimeoutMs } : undefined,
+      );
+      // Surface tool errors loudly instead of feeding a bad value downstream.
+      if ((raw as { isError?: boolean }).isError) {
+        const text =
+          (raw as { content?: Array<{ text?: string }> }).content?.[0]?.text ?? 'unknown error';
+        throw new Error(`tool ${name} failed: ${text}`);
+      }
       const parsed = parseToolResult(raw);
       toolResults.push({ name, result: parsed });
       messages.push({ role: 'tool', toolName: name, content: JSON.stringify(parsed) });

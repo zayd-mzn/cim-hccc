@@ -32,6 +32,8 @@ export interface RunConsumerOptions {
   /** Real LLM client; if omitted a deterministic mock plan is used. */
   llm?: LlmClient;
   maxSteps?: number;
+  /** Per-tool-call timeout (ms). Raise for slow on-chain (testnet) calls. */
+  callTimeoutMs?: number;
 }
 
 /**
@@ -95,5 +97,6 @@ export async function runConsumerAgent(opts: RunConsumerOptions): Promise<AgentR
     systemPrompt: CONSUMER_SYSTEM_PROMPT,
     goal: `Acquire a "${opts.goal.capability}" dataset with spec ${JSON.stringify(opts.goal.spec)}.`,
     maxSteps: opts.maxSteps,
+    callTimeoutMs: opts.callTimeoutMs,
   });
 }
