@@ -1,7 +1,7 @@
 {
   "name": "@agent-market/hedera-core",
   "version": "0.1.0",
-  "description": "HederaClient wrapper: HTS, HCS, topics, accounts. (Owned by Abdellah per ROLES.md — this package ships the INTERFACE + an in-memory stub so the agent/MCP workstream runs locally.)",
+  "description": "HederaClient wrapper: HTS, HCS, topics, accounts. (Owned by Abdellah per ROLES.md \u2014 this package ships the INTERFACE + an in-memory stub so the agent/MCP workstream runs locally.)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,9 +14,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "setup:testnet": "tsx scripts/setup.ts"
   },
   "dependencies": {
-    "@agent-market/protocol": "workspace:*"
+    "@agent-market/protocol": "workspace:*",
+    "@hiero-ledger/sdk": "2.90.0",
+    "dotenv": "16.4.5"
   }
 }

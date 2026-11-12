@@ -9,3 +9,4 @@
 export * from './client.js';
 export * from './in-memory-client.js';
 export * from './hcs-log.js';
+export * from './sdk-client.js';
