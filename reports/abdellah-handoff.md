@@ -37,7 +37,7 @@ or `refundJob` (consumer, only after deadline). Provider verifies payment with `
 
 ## Open / not done
 - Branch not merged to `main` yet.
-- Refund path verified only on local EVM tests, not on testnet.
+- ~~Refund path untested on testnet~~ -> verified (`smoke:refund`): early refund reverts, refund after deadline returns funds, deliver after refund reverts.
 - Real HTS `associate()` has no local test (precompile exists only on Hedera); covered by the testnet run.
 - No retry/backoff in the client; fine for the demo, add if testnet flakes.
 - Scope notes (per TRUST-MODEL): server-custodial keys, no dispute resolution, no sybil governance.

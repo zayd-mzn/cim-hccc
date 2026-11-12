@@ -16,7 +16,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "setup:testnet": "tsx scripts/setup.ts",
-    "smoke:escrow": "tsx scripts/smoke-escrow.ts"
+    "smoke:escrow": "tsx scripts/smoke-escrow.ts",
+    "smoke:refund": "tsx scripts/smoke-refund.ts"
   },
   "dependencies": {
     "@agent-market/protocol": "workspace:*",
