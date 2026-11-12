@@ -77,9 +77,18 @@ real implementations drop in without touching agent/MCP logic:
    `PaymentGateway` interface in `services/mcp-server/src/payment.ts` is the seam.
    `StubPaymentGateway` simulates `402 → pay → proof` + escrow hold/release/refund.
    Implement the same interface over the real x402 client + contract.
-4. **LLM provider (team decision)** — `LlmClient` in `packages/agent-kit/src/llm.ts`
-   is provider-agnostic. `MockLlmClient` drives the loop with **no API key** (used
-   in CI/tests/demo). Drop in OpenAI/Anthropic/Vercel AI SDK for the live demo.
+4. **LLM provider** — `LlmClient` in `packages/agent-kit/src/llm.ts` is
+   provider-agnostic. Two implementations ship:
+   - `MockLlmClient` — deterministic scripted plan, **no API key** (CI/tests/demo).
+   - `OpenAiLlmClient` — any OpenAI-compatible `/chat/completions` endpoint with
+     tool calling (OpenAI, Groq, OpenRouter, Ollama, Anthropic's OpenAI-compat).
+   The consumer auto-selects the real client when `OPENAI_API_KEY` is set, else
+   falls back to the mock. Configure with env vars:
+   ```
+   OPENAI_API_KEY=sk-...                 # required to use a real model
+   OPENAI_BASE_URL=https://api.openai.com/v1   # optional (default)
+   OPENAI_MODEL=gpt-4o-mini                     # optional (default)
+   ```
 
 ## Architecture notes
 

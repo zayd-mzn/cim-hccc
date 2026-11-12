@@ -8,15 +8,32 @@
  * plan so the loop runs with no API key; a real LlmClient slots in unchanged.
  */
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { MockLlmClient, runAgentLoop, type AgentRunResult, type LlmClient } from '@agent-market/agent-kit';
+import {
+  MockLlmClient,
+  resolveLlmFromEnv,
+  runAgentLoop,
+  type AgentRunResult,
+  type LlmClient,
+} from '@agent-market/agent-kit';
 
 export const CONSUMER_SYSTEM_PROMPT = [
-  'You are the Analysis agent in the Agent Market.',
-  'You need to acquire a dataset from a provider, pay for it through the on-chain',
-  'settlement contract, and verify the delivered result hash.',
-  'Use the marketplace tools in this order: discover_providers, request_service,',
-  'pay_for_job, get_delivery. Log a short rationale with log_decision when useful.',
-  'Everything you do is recorded to the HCS audit log — act accountably.',
+  'You are the Analysis agent in the Agent Market, an autonomous buyer of data.',
+  'Goal: acquire a dataset from a provider, pay for it through the on-chain',
+  'settlement/escrow contract, and verify the delivered result hash.',
+  '',
+  'Workflow — call the tools in this order, one per turn:',
+  '  1. discover_providers(capability) — find a provider for the capability.',
+  '  2. request_service(consumerAgentId, providerId, capability, spec) — returns a jobId',
+  '     and x402 payment details. Use the providerId from step 1.',
+  '  3. pay_for_job(consumerAgentId, jobId) — pay into escrow. Use the jobId from step 2.',
+  '  4. get_delivery(jobId) — fetch the result + hash once paid.',
+  '  5. log_decision(agentId, jobId, rationale) — record a short rationale to the audit log.',
+  '',
+  'Rules:',
+  '- Always pass your own agent id as consumerAgentId/agentId (given in the task).',
+  '- Reuse the exact jobId returned by request_service for later calls.',
+  '- When the job is delivered and verified, reply with a one-line confirmation and stop.',
+  '- Everything you do is recorded to the HCS audit log — act accountably.',
 ].join(' ');
 
 export interface ConsumerGoal {
@@ -90,12 +107,17 @@ function buildMockPlan(opts: RunConsumerOptions): LlmClient {
 }
 
 export async function runConsumerAgent(opts: RunConsumerOptions): Promise<AgentRunResult> {
-  const llm = opts.llm ?? buildMockPlan(opts);
+  // Prefer an explicitly injected client, then a real env-configured LLM, then
+  // the deterministic mock plan (so CI/offline runs need no API key).
+  const llm = opts.llm ?? resolveLlmFromEnv() ?? buildMockPlan(opts);
   return runAgentLoop({
     llm,
     mcp: opts.mcp,
     systemPrompt: CONSUMER_SYSTEM_PROMPT,
-    goal: `Acquire a "${opts.goal.capability}" dataset with spec ${JSON.stringify(opts.goal.spec)}.`,
+    goal:
+      `Your agent id is "${opts.consumerAgentId}". ` +
+      `Acquire a "${opts.goal.capability}" dataset with spec ${JSON.stringify(opts.goal.spec)}. ` +
+      `Complete the full purchase: discover, request, pay, get delivery, and log your decision.`,
     maxSteps: opts.maxSteps,
     callTimeoutMs: opts.callTimeoutMs,
   });
