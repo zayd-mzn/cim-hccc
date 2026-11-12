@@ -1,0 +1,22 @@
+{
+  "name": "@agent-market/hedera-core",
+  "version": "0.1.0",
+  "description": "HederaClient wrapper: HTS, HCS, topics, accounts. (Owned by Abdellah per ROLES.md — this package ships the INTERFACE + an in-memory stub so the agent/MCP workstream runs locally.)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@agent-market/protocol": "workspace:*"
+  }
+}

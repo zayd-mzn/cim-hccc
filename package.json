@@ -1,0 +1,23 @@
+{
+  "name": "agent-market",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A marketplace where autonomous AI agents discover, negotiate, and buy services from each other on Hedera.",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "demo": "pnpm --filter @agent-market/consumer demo"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "tsx": "4.19.2",
+    "vitest": "2.1.5",
+    "@types/node": "22.9.0"
+  },
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

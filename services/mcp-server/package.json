@@ -1,0 +1,29 @@
+{
+  "name": "@agent-market/mcp-server",
+  "version": "0.1.0",
+  "description": "Agent Market MCP server — exposes marketplace operations as MCP tools. (Zayd)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "agent-market-mcp": "./dist/stdio.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "tsx src/stdio.ts"
+  },
+  "dependencies": {
+    "@agent-market/protocol": "workspace:*",
+    "@agent-market/hedera-core": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.12.1",
+    "zod": "3.25.76"
+  }
+}

@@ -1,0 +1,13 @@
+packages:
+  - "packages/*"
+  - "services/*"
+  - "services/agents/*"
+
+# esbuild postinstall (used by tsx + vitest) must be allowed to run.
+onlyBuiltDependencies:
+  - esbuild
+
+# Don't re-run the install/dependency check before every `pnpm run` script.
+verifyDepsBeforeRun: false
+allowBuilds:
+  esbuild: set this to true or false
