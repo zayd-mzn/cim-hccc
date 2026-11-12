@@ -3,14 +3,21 @@
  *
  * DEPENDENCY FLAG:
  *   - x402 flow (402 → pay → retry w/ proof) is owned by Youssef.
- *   - settlement/escrow contract (hold per jobId → release/refund) is Abdellah's.
- *   - `contractJobRef` format is an open PROTOCOL.md item (Abdellah's contract).
+ *   - settlement/escrow contract (hold per jobId → release/refund) is Abdellah's
+ *     `contracts/contracts/AgentEscrow.sol` (merged on main).
  *
- * This interface is the clean seam my MCP server + agents code against. The
- * StubPaymentGateway below simulates the whole flow against the in-memory
- * HederaClient so the end-to-end loop runs with real token movement and escrow
- * accounting. When Youssef's x402 client + Abdellah's contract land, implement
- * this same interface over them — nothing else in my workstream changes.
+ * This interface is the clean seam my MCP server + agents code against, and it
+ * mirrors AgentEscrow's shape 1:1 so the real implementation is a drop-in:
+ *   PaymentGateway.pay     → AgentEscrow.fund(jobId, provider, amount, deadline)
+ *   PaymentGateway.release → AgentEscrow.deliver(jobId, resultHash)
+ *   PaymentGateway.refund  → AgentEscrow.refund(jobId)   [only after deadline]
+ *   PaymentGateway.verify  → read the JobFunded event / jobs[jobId].status==Held
+ *
+ * The StubPaymentGateway below simulates the whole flow against the in-memory
+ * HederaClient (including the deadline + refund-after-deadline rule) so the loop
+ * runs with real token movement and escrow accounting. When Youssef's x402
+ * client wires AgentEscrow in, implement this same interface over it — nothing
+ * else in my workstream changes.
  */
 import type { HederaClient } from '@agent-market/hedera-core';
 
@@ -21,6 +28,10 @@ export interface PaymentRequired {
   tokenId: string;
   /** Settlement/escrow contract address funds are paid into. */
   contractAddress: string;
+  /** Provider that will receive the funds on delivery (AgentEscrow.fund). */
+  providerAccountId: string;
+  /** Unix seconds; refund allowed only after this (AgentEscrow deadline). */
+  deadline: number;
 }
 
 /** Proof that payment settled into the contract against a jobId. */
@@ -49,21 +60,32 @@ export interface PaymentGateway {
   /** Verify a proof references real, held funds for the job. */
   verify(proof: PaymentProof): Promise<boolean>;
 
-  /** Release escrowed funds to the provider on verified delivery. */
-  release(jobId: string, providerAccountId: string): Promise<{ txId: string }>;
+  /**
+   * Release escrowed funds to the provider on verified delivery.
+   * Mirrors AgentEscrow.deliver(jobId, resultHash): the delivered result hash is
+   * recorded on-chain as part of the release.
+   */
+  release(jobId: string, resultHash: string): Promise<{ txId: string }>;
 
-  /** Refund escrowed funds to the consumer (no/failed delivery). */
+  /**
+   * Refund escrowed funds to the consumer. Mirrors AgentEscrow.refund: only
+   * permitted once the job's deadline has passed and it was never delivered.
+   */
   refund(jobId: string): Promise<{ txId: string }>;
 }
 
 interface EscrowEntry {
   jobId: string;
   consumerAccountId: string;
+  providerAccountId: string;
   amount: number;
   tokenId: string;
   contractJobRef: string;
+  /** Unix seconds; refund only allowed after this (mirrors AgentEscrow). */
+  deadline: number;
   released: boolean;
   refunded: boolean;
+  resultHash?: string;
 }
 
 /**
@@ -104,9 +126,11 @@ export class StubPaymentGateway implements PaymentGateway {
     this.escrows.set(challenge.jobId, {
       jobId: challenge.jobId,
       consumerAccountId,
+      providerAccountId: challenge.providerAccountId,
       amount: challenge.amount,
       tokenId: challenge.tokenId,
       contractJobRef,
+      deadline: challenge.deadline,
       released: false,
       refunded: false,
     });
@@ -128,14 +152,20 @@ export class StubPaymentGateway implements PaymentGateway {
     );
   }
 
-  async release(jobId: string, providerAccountId: string): Promise<{ txId: string }> {
+  async release(jobId: string, resultHash: string): Promise<{ txId: string }> {
     const escrow = this.escrows.get(jobId);
     if (!escrow) throw new Error(`no escrow for job ${jobId}`);
     if (escrow.released) throw new Error(`escrow already released for job ${jobId}`);
     if (escrow.refunded) throw new Error(`escrow already refunded for job ${jobId}`);
+    if (!resultHash) throw new Error('empty result hash');
     const from = await this.escrowAccount();
-    const transfer = await this.hedera.transferToken(from, providerAccountId, escrow.amount);
+    const transfer = await this.hedera.transferToken(
+      from,
+      escrow.providerAccountId,
+      escrow.amount,
+    );
     escrow.released = true;
+    escrow.resultHash = resultHash;
     return { txId: transfer.txId };
   }
 
@@ -144,6 +174,9 @@ export class StubPaymentGateway implements PaymentGateway {
     if (!escrow) throw new Error(`no escrow for job ${jobId}`);
     if (escrow.released) throw new Error(`cannot refund released job ${jobId}`);
     if (escrow.refunded) throw new Error(`escrow already refunded for job ${jobId}`);
+    if (nowSeconds() <= escrow.deadline) {
+      throw new Error(`cannot refund job ${jobId} before deadline`);
+    }
     const from = await this.escrowAccount();
     const transfer = await this.hedera.transferToken(
       from,
@@ -153,4 +186,8 @@ export class StubPaymentGateway implements PaymentGateway {
     escrow.refunded = true;
     return { txId: transfer.txId };
   }
+}
+
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
 }

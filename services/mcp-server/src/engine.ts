@@ -199,6 +199,9 @@ export class MarketplaceEngine {
 
     // provider quotes
     const quote = await connector.quote({ jobId, capability: input.capability, spec: input.spec });
+    // Escrow deadline: funds are refundable to the consumer after the offer
+    // expires if the provider never delivers (mirrors AgentEscrow deadline).
+    const deadline = Math.floor(new Date(quote.expiresAt).getTime() / 1000);
     const offer = {
       price: quote.price,
       tokenId: this.tokenId,
@@ -207,6 +210,8 @@ export class MarketplaceEngine {
         amount: quote.price,
         tokenId: this.tokenId,
         contractAddress: '',
+        providerAccountId,
+        deadline,
       }).contractAddress,
       expiresAt: quote.expiresAt,
     };
@@ -224,6 +229,8 @@ export class MarketplaceEngine {
       amount: offer.price,
       tokenId: offer.tokenId,
       contractAddress: offer.contractAddress,
+      providerAccountId,
+      deadline,
     };
     job.paymentRequired = paymentRequired;
 
@@ -301,11 +308,27 @@ export class MarketplaceEngine {
       job.providerAccountId,
     );
 
-    // release escrow to provider
-    await this.payment.release(job.jobId, job.providerAccountId);
+    // release escrow to provider (records the delivered result hash on-chain)
+    await this.payment.release(job.jobId, delivery.resultHash);
     job.status = 'released';
 
     return delivery;
+  }
+
+  // --- refund (no/failed delivery) ----------------------------------------
+  /**
+   * Refund a paid-but-undelivered job back to the consumer. Mirrors
+   * AgentEscrow.refund: only valid after the job deadline and before release.
+   * Exposes the escrow's failure path (future work: surface as an MCP tool).
+   */
+  async refundJob(input: { jobId: string }): Promise<{ txId: string }> {
+    const job = this.mustJob(input.jobId);
+    if (job.status !== 'paid') {
+      throw new Error(`job ${job.jobId} not refundable (status=${job.status})`);
+    }
+    const result = await this.payment.refund(job.jobId);
+    job.status = 'failed';
+    return result;
   }
 
   // --- MCP tool: log_decision ---------------------------------------------
