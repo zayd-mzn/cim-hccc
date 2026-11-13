@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "services/*"
   - "services/agents/*"
+  - "apps/*"
   - "contracts"
 
 # esbuild postinstall (used by tsx + vitest) must be allowed to run.

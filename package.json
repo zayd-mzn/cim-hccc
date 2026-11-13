@@ -13,7 +13,9 @@
     "demo:external": "pnpm --filter @agent-market/external-agent-demo build && pnpm --filter @agent-market/mcp-server build && pnpm --filter @agent-market/external-agent-demo start",
     "start:mcp": "pnpm --filter @agent-market/mcp-server start",
     "demo:x402": "pnpm --filter @agent-market/x402 demo",
-    "reputation": "pnpm --filter @agent-market/reputation report"
+    "reputation": "pnpm --filter @agent-market/reputation report",
+    "dashboard": "pnpm --filter @agent-market/dashboard dev",
+    "dashboard:build": "pnpm --filter @agent-market/dashboard build"
   },
   "devDependencies": {
     "typescript": "5.6.3",

@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+/*
+ * CIM semantic colour system.
+ * Components consume the Tailwind aliases below (bg-cim-surface,
+ * text-cim-muted, border-cim-border, etc.) rather than literal colours.
+ * A future theme toggle only needs to switch documentElement.dataset.theme.
+ */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --cim-canvas: #020817;
+  --cim-sidebar: #040b1c;
+  --cim-surface: #071225;
+  --cim-surface-2: #0b1932;
+  --cim-surface-3: #10213f;
+  --cim-border: #162a4a;
+  --cim-border-strong: #23456f;
+
+  --cim-text: #f6f9ff;
+  --cim-muted: #9badc9;
+  --cim-subtle: #627594;
+  --cim-faint: #3f526f;
+
+  --cim-cyan: #18d5f2;
+  --cim-cyan-hover: #67e8f9;
+  --cim-blue: #2584ff;
+  --cim-violet: #7c3aed;
+  --cim-violet-soft: #a78bfa;
+  --cim-on-accent: #020817;
+
+  --cim-success: #34d399;
+  --cim-warning: #fbbf24;
+  --cim-danger: #fb7185;
+
+  --cim-grid: rgba(96, 165, 250, 0.045);
+  --cim-sidebar-glass: rgba(4, 11, 28, 0.95);
+  --cim-header-glass: rgba(2, 8, 23, 0.86);
+  --cim-overlay: rgba(2, 8, 23, 0.84);
+  --cim-brand-gradient: linear-gradient(110deg, var(--cim-cyan) 0%, var(--cim-blue) 48%, var(--cim-violet) 100%);
+
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--cim-text);
+  background: var(--cim-canvas);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ready for a later UI toggle; no component rewrites will be needed. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --cim-canvas: #f4f7fc;
+  --cim-sidebar: #f8fbff;
+  --cim-surface: #ffffff;
+  --cim-surface-2: #edf3fc;
+  --cim-surface-3: #e3ecf9;
+  --cim-border: #d5e0f0;
+  --cim-border-strong: #aec1dd;
+
+  --cim-text: #081225;
+  --cim-muted: #516582;
+  --cim-subtle: #71829b;
+  --cim-faint: #9caac0;
+
+  --cim-cyan: #0891b2;
+  --cim-cyan-hover: #0e7490;
+  --cim-blue: #2563eb;
+  --cim-violet: #7c3aed;
+  --cim-violet-soft: #6d28d9;
+  --cim-on-accent: #ffffff;
+
+  --cim-success: #059669;
+  --cim-warning: #b45309;
+  --cim-danger: #e11d48;
+
+  --cim-grid: rgba(37, 99, 235, 0.055);
+  --cim-sidebar-glass: rgba(248, 251, 255, 0.95);
+  --cim-header-glass: rgba(244, 247, 252, 0.88);
+  --cim-overlay: rgba(244, 247, 252, 0.88);
+}
+
+@theme inline {
+  --color-cim-canvas: var(--cim-canvas);
+  --color-cim-sidebar: var(--cim-sidebar);
+  --color-cim-surface: var(--cim-surface);
+  --color-cim-surface-2: var(--cim-surface-2);
+  --color-cim-surface-3: var(--cim-surface-3);
+  --color-cim-border: var(--cim-border);
+  --color-cim-border-strong: var(--cim-border-strong);
+  --color-cim-text: var(--cim-text);
+  --color-cim-muted: var(--cim-muted);
+  --color-cim-subtle: var(--cim-subtle);
+  --color-cim-faint: var(--cim-faint);
+  --color-cim-cyan: var(--cim-cyan);
+  --color-cim-cyan-hover: var(--cim-cyan-hover);
+  --color-cim-blue: var(--cim-blue);
+  --color-cim-violet: var(--cim-violet);
+  --color-cim-violet-soft: var(--cim-violet-soft);
+  --color-cim-on-accent: var(--cim-on-accent);
+  --color-cim-success: var(--cim-success);
+  --color-cim-warning: var(--cim-warning);
+  --color-cim-danger: var(--cim-danger);
+}
+
+* { box-sizing: border-box; }
+html { background: var(--cim-canvas); }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--cim-canvas); }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+::selection { color: var(--cim-on-accent); background: var(--cim-cyan); }
+
+.brand-gradient-text {
+  color: transparent;
+  background: var(--cim-brand-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.brand-button {
+  color: var(--cim-on-accent);
+  background: var(--cim-brand-gradient);
+  box-shadow: 0 10px 34px rgba(37, 132, 255, 0.22);
+}
+.brand-button:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 14px 42px rgba(124, 58, 237, 0.3);
+}
+
+.brand-icon {
+  color: var(--cim-cyan);
+  border-color: color-mix(in srgb, var(--cim-cyan) 34%, transparent);
+  background: color-mix(in srgb, var(--cim-blue) 12%, transparent);
+  box-shadow: inset 0 0 24px rgba(37, 132, 255, 0.06);
+}
+
+.sidebar-glass { background: var(--cim-sidebar-glass); }
+.header-glass { background: var(--cim-header-glass); }
+.theme-overlay { background: var(--cim-overlay); }
+
+.cyber-grid {
+  background-image:
+    linear-gradient(var(--cim-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cim-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+.signal-orbit { position: absolute; inset: 50%; border: 1px solid var(--cim-border-strong); border-radius: 999px; transform: translate(-50%, -50%); }
+.signal-orbit.one { width: 220px; height: 220px; animation: spin 18s linear infinite; }
+.signal-orbit.two { width: 330px; height: 330px; animation: spin 28s linear infinite reverse; }
+.signal-orbit::after { content: ""; position: absolute; left: -4px; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--cim-cyan); box-shadow: 0 0 14px var(--cim-cyan); }
+.signal-orbit.two::after { left: auto; right: 25px; top: 17%; background: var(--cim-violet); box-shadow: 0 0 14px var(--cim-violet); }
+
+.scan-line { animation: scan 2.5s ease-in-out infinite alternate; }
+.event-enter { animation: event-in .3s ease both; }
+.view-enter { animation: view-in .4s cubic-bezier(.2,.8,.2,1) both; }
+.bar-grow { transform-origin: bottom; animation: bar-grow .8s ease both; }
+
+@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes scan { from { transform: translateY(-42px); } to { transform: translateY(42px); } }
+@keyframes event-in { from { opacity: 0; transform: translateX(-8px); } }
+@keyframes view-in { from { opacity: 0; transform: translateY(10px); } }
+@keyframes bar-grow { from { transform: scaleY(0); } }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--cim-canvas); }
+::-webkit-scrollbar-thumb { background: var(--cim-border-strong); border-radius: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
