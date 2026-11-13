@@ -1,7 +1,7 @@
 {
   "name": "@agent-market/protocol",
   "version": "0.1.0",
-  "description": "Shared message schema + HCS audit format. Every component imports this. (Provisional — owned by Youssef per ROLES.md)",
+  "description": "Shared message schema + HCS audit format. Every component imports this. (Owner: Youssef. Locked v1.)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

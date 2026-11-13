@@ -11,7 +11,9 @@
     "demo": "pnpm --filter @agent-market/consumer demo",
     "demo:testnet": "pnpm --filter @agent-market/consumer demo:testnet",
     "demo:external": "pnpm --filter @agent-market/external-agent-demo build && pnpm --filter @agent-market/mcp-server build && pnpm --filter @agent-market/external-agent-demo start",
-    "start:mcp": "pnpm --filter @agent-market/mcp-server start"
+    "start:mcp": "pnpm --filter @agent-market/mcp-server start",
+    "demo:x402": "pnpm --filter @agent-market/x402 demo",
+    "reputation": "pnpm --filter @agent-market/reputation report"
   },
   "devDependencies": {
     "typescript": "5.6.3",

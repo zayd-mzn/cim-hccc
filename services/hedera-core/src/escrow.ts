@@ -7,7 +7,7 @@
  * `contractJobRef` (PROTOCOL.md `pay` payload) = jobRef(jobId): "0x" + sha256(jobId) hex,
  * i.e. the bytes32 key the contract stores the job under.
  */
-import { sha256Hex } from '@agent-market/protocol';
+import { contractJobRef } from '@agent-market/protocol';
 
 export type EscrowStatus = 'None' | 'Held' | 'Released' | 'Refunded';
 
@@ -38,9 +38,9 @@ export interface EscrowClient {
   readonly escrowAddress: string;
 }
 
-/** bytes32 key of a job in the contract, as 0x-hex. */
+/** bytes32 key of a job in the contract, as 0x-hex. Same value as protocol's `contractJobRef`. */
 export function jobRef(jobId: string): string {
-  return `0x${sha256Hex(jobId)}`;
+  return contractJobRef(jobId);
 }
 
 export const STATUS_NAMES: EscrowStatus[] = ['None', 'Held', 'Released', 'Refunded'];

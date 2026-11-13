@@ -7,6 +7,7 @@
   "include": ["src"],
   "references": [
     { "path": "../../packages/protocol" },
-    { "path": "../hedera-core" }
+    { "path": "../hedera-core" },
+    { "path": "../../packages/x402" }
   ]
 }

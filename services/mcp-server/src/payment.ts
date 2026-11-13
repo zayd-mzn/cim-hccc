@@ -19,6 +19,7 @@
  * client wires AgentEscrow in, implement this same interface over it — nothing
  * else in my workstream changes.
  */
+import { contractJobRef } from '@agent-market/protocol';
 import type { EscrowClient, HederaClient } from '@agent-market/hedera-core';
 
 /** The x402 "402 Payment Required" challenge a Consumer must satisfy. */
@@ -41,6 +42,8 @@ export interface PaymentProof {
   /** Reference the on-chain settlement (PayPayload.contractJobRef). */
   contractJobRef: string;
   amount: number;
+  /** x402 `X-PAYMENT` header value (base64), set by X402PaymentGateway. */
+  x402?: string;
 }
 
 export interface PaymentGateway {
@@ -122,14 +125,15 @@ export class StubPaymentGateway implements PaymentGateway {
       escrow,
       challenge.amount,
     );
-    const contractJobRef = `${this.contractAddress}#${challenge.jobId}`;
+    // Same key the real AgentEscrow uses, so stub and testnet `pay` records match.
+    const jobRef = contractJobRef(challenge.jobId);
     this.escrows.set(challenge.jobId, {
       jobId: challenge.jobId,
       consumerAccountId,
       providerAccountId: challenge.providerAccountId,
       amount: challenge.amount,
       tokenId: challenge.tokenId,
-      contractJobRef,
+      contractJobRef: jobRef,
       deadline: challenge.deadline,
       released: false,
       refunded: false,
@@ -137,7 +141,7 @@ export class StubPaymentGateway implements PaymentGateway {
     return {
       jobId: challenge.jobId,
       txId: transfer.txId,
-      contractJobRef,
+      contractJobRef: jobRef,
       amount: challenge.amount,
     };
   }
@@ -205,7 +209,7 @@ function nowSeconds(): number {
  * Per-job consumer/provider context is captured at `pay` time so `release` and
  * `refund` can supply the ids the EscrowClient methods require.
  */
-interface EscrowContext {
+export interface EscrowContext {
   consumerAccountId: string;
   providerAccountId: string;
   amount: number;
@@ -213,9 +217,9 @@ interface EscrowContext {
 }
 
 export class EscrowPaymentGateway implements PaymentGateway {
-  private readonly contexts = new Map<string, EscrowContext>();
+  protected readonly contexts = new Map<string, EscrowContext>();
 
-  constructor(private readonly escrow: EscrowClient) {}
+  constructor(protected readonly escrow: EscrowClient) {}
 
   requirePayment(input: PaymentRequired): PaymentRequired {
     // The real contract address comes from the EscrowClient.
@@ -245,6 +249,8 @@ export class EscrowPaymentGateway implements PaymentGateway {
   }
 
   async verify(proof: PaymentProof): Promise<boolean> {
+    // The proof must point at THIS job's escrow slot, not just any held funds.
+    if (proof.contractJobRef !== contractJobRef(proof.jobId)) return false;
     const job = await this.escrow.getJob(proof.jobId);
     return job.status === 'Held' && job.amount === proof.amount;
   }

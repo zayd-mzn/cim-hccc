@@ -18,7 +18,8 @@ import {
   type SdkClientState,
 } from '@agent-market/hedera-core';
 import { MarketplaceEngine } from './engine.js';
-import { EscrowPaymentGateway, StubPaymentGateway } from './payment.js';
+import { EscrowPaymentGateway, StubPaymentGateway, type PaymentGateway } from './payment.js';
+import { X402PaymentGateway } from './x402-gateway.js';
 
 export interface InMemoryEngineResult {
   engine: MarketplaceEngine;
@@ -34,13 +35,16 @@ export interface InMemoryEngineResult {
  */
 export async function createInMemoryEngine(options: {
   useEscrowGateway?: boolean;
+  /** Route payment through x402 (402 → escrow fund → signed proof → verify). */
+  useX402?: boolean;
 } = {}): Promise<InMemoryEngineResult> {
   const hedera = new InMemoryHederaClient();
   const { topicId } = await hedera.createTopic();
   const { tokenId } = await hedera.createToken();
-  const payment = options.useEscrowGateway
-    ? new EscrowPaymentGateway(new InMemoryEscrowClient(hedera))
-    : new StubPaymentGateway(hedera);
+  let payment: PaymentGateway;
+  if (options.useX402) payment = new X402PaymentGateway(new InMemoryEscrowClient(hedera), hedera);
+  else if (options.useEscrowGateway) payment = new EscrowPaymentGateway(new InMemoryEscrowClient(hedera));
+  else payment = new StubPaymentGateway(hedera);
   const engine = new MarketplaceEngine({ hedera, topicId, tokenId, payment });
   return { engine, hedera, topicId, tokenId };
 }
@@ -77,6 +81,8 @@ interface HederaStateFile extends SdkClientState {
  */
 export async function createSdkEngine(options: {
   repoRoot: string;
+  /** Verify payments with the full x402 checks (signed proof + on-chain escrow). */
+  useX402?: boolean;
 }): Promise<SdkEngineResult> {
   const statePath = resolve(options.repoRoot, '.hedera-state.json');
   const state = JSON.parse(readFileSync(statePath, 'utf8')) as HederaStateFile;
@@ -86,7 +92,9 @@ export async function createSdkEngine(options: {
   hedera.tokenId = state.tokenId;
   hedera.topicId = state.topicId;
 
-  const payment = new EscrowPaymentGateway(hedera);
+  const payment = options.useX402
+    ? new X402PaymentGateway(hedera, hedera)
+    : new EscrowPaymentGateway(hedera);
   const engine = new MarketplaceEngine({
     hedera,
     topicId: state.topicId,
