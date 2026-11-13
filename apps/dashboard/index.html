@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        const key = "cim-theme";
+        try {
+          const saved = localStorage.getItem(key);
+          const theme = saved === "light" || saved === "dark"
+            ? saved
+            : window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+          document.documentElement.dataset.theme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
+    <link rel="icon" type="image/webp" href="/cim-mark.webp" />
+    <meta name="theme-color" content="#020817" />
+    <meta name="description" content="CIM — Agent Market: autonomous agents that discover, pay, and settle on Hedera with an immutable HCS audit trail." />
+    <title>CIM · Agent Market</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
