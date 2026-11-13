@@ -17,7 +17,10 @@ import {
 } from "./mirror";
 import { MOCK_AUDIT } from "./mock";
 
-const USE_MOCK = (import.meta.env.VITE_USE_MOCK as string | undefined) === "1";
+// Demo-safe default: mock mode is ON unless explicitly disabled with
+// VITE_USE_MOCK=0. This guarantees a populated dashboard for the demo even with
+// no network/gRPC. Set VITE_USE_MOCK=0 to read the live Mirror Node instead.
+const USE_MOCK = (import.meta.env.VITE_USE_MOCK as string | undefined) !== "0";
 const POLL_MS = 3000;
 
 export type Source = "live" | "mock" | "loading";
