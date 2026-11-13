@@ -20,10 +20,12 @@ log where every message carries a verified content hash.
 ```bash
 pnpm install
 pnpm build
-pnpm test            # 18 tests across protocol, hedera-core, engine, and the consumer loop
+pnpm test            # 52 tests across all packages
 pnpm demo            # in-process two-agent demo + prints the HCS log
 pnpm demo:external   # bring-your-own agent: a separate process joins over stdio
 pnpm demo:testnet    # same loop, settled on real Hedera testnet (needs secrets, below)
+pnpm demo:x402       # x402 over real HTTP: 402 → fund escrow → retry with proof → 200
+pnpm reputation      # live provider scores from the testnet Mirror Node (read-only)
 ```
 
 ### Running on Hedera testnet (`pnpm demo:testnet`)
@@ -53,7 +55,9 @@ marketplace without importing our code (TRUST-MODEL.md Model B).
 
 | Package | Owner | Status |
 |---|---|---|
-| `packages/protocol` | Youssef | **Provisional** — built from `PROTOCOL.md` so I'm unblocked. Reconcile with Youssef. |
+| `packages/protocol` | Youssef | **Locked v1** — drafted by Zayd, signed off by Youssef. |
+| `packages/x402` | Youssef | Done — HTTP 402 → escrow pay → retry with signed proof. |
+| `services/reputation` | Youssef | Done — replayable provider scores from HCS + escrow events. |
 | `services/hedera-core` | Abdellah | **Interface + in-memory stub**. Real `@hashgraph/sdk` impl is Abdellah's. |
 | `services/mcp-server` | **Zayd** | Done — 6 MCP tools + marketplace engine + payment seam. |
 | `packages/agent-kit` | **Zayd** | Done — provider-agnostic LLM loop + MCP client wiring. |

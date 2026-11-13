@@ -23,6 +23,7 @@
   "dependencies": {
     "@agent-market/protocol": "workspace:*",
     "@agent-market/hedera-core": "workspace:*",
+    "@agent-market/x402": "workspace:*",
     "@modelcontextprotocol/sdk": "1.12.1",
     "zod": "3.25.76"
   }

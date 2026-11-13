@@ -2,8 +2,8 @@
  * Message envelope + per-type payloads.
  *
  * Source of truth: agent-market/PROTOCOL.md (the day-1 shared contract).
- * Owner per ROLES.md: Youssef. This is a PROVISIONAL implementation built by
- * Zayd so the agents + MCP server can run end-to-end; reconcile before merge.
+ * Owner per ROLES.md: Youssef. Locked v1 (drafted by Zayd, signed off by
+ * Youssef). Changing any field is a breaking change for every component.
  *
  * A single job is a fixed 5-message sequence:
  *   Consumer ── request ──▶ Provider

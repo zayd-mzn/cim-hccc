@@ -57,6 +57,18 @@ importers:
         specifier: 3.25.76
         version: 3.25.76
 
+  packages/x402:
+    dependencies:
+      '@agent-market/hedera-core':
+        specifier: workspace:*
+        version: link:../../services/hedera-core
+      '@agent-market/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+
   services/agents/consumer:
     dependencies:
       '@agent-market/agent-kit':
@@ -113,12 +125,27 @@ importers:
       '@agent-market/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@agent-market/x402':
+        specifier: workspace:*
+        version: link:../../packages/x402
       '@modelcontextprotocol/sdk':
         specifier: 1.12.1
         version: 1.12.1(supports-color@8.1.1)
       zod:
         specifier: 3.25.76
         version: 3.25.76
+
+  services/reputation:
+    dependencies:
+      '@agent-market/hedera-core':
+        specifier: workspace:*
+        version: link:../hedera-core
+      '@agent-market/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@noble/hashes':
+        specifier: 1.8.0
+        version: 1.8.0
 
 packages:
 
